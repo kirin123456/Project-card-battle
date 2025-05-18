@@ -75,6 +75,20 @@ public class EnemyController : MonoBehaviour
 
         yield return new WaitForSeconds(.5f);
 
+        if(enemyAIType != AIType.placeFromDeck)
+        {
+            for(int i =0; i < BattleController.instance.cardsToDrawPerTurn; i++)
+            {
+                cardsInHand.Add(activeCards[0]);
+                activeCards.RemoveAt(0);
+
+                if (activeCards.Count == 0)
+                {
+                    SetupDeck();
+                }
+            }
+        }
+
         List<CardPlacePoint> cardPoints = new List<CardPlacePoint>();
         cardPoints.AddRange(CardPointsController.instance.enemyCardPoints);
 
@@ -93,6 +107,12 @@ public class EnemyController : MonoBehaviour
                 cardPoints.RemoveAt(randomPoint);
             }
         }
+
+        CardScriptableObject selectedCard = null;
+        int iterations = 0;
+        List<CardPlacePoint> preferredPoints = new List<CardPlacePoint>();
+        List<CardPlacePoint> secondaryPoints = new List<CardPlacePoint>();
+
 
         switch (enemyAIType)
         {
@@ -114,12 +134,137 @@ public class EnemyController : MonoBehaviour
 
             case AIType.handRandomPlace:
 
+                selectedCard = SelectedCardToPlay();
+
+
+                iterations = 50;
+                while(selectedCard !=null && iterations >0 && selectedPoint.activeCard == null)
+                {
+                    PlayCard(selectedCard, selectedPoint);
+
+                    //check if we should try play another card
+                    selectedCard = SelectedCardToPlay();
+
+                    iterations--;
+
+                    yield return new WaitForSeconds(CardPointsController.instance.timeBetweenAttacks);
+
+                    while (selectedPoint.activeCard != null && cardPoints.Count > 0)
+                    {
+                        randomPoint = Random.Range(0, cardPoints.Count);
+                        selectedPoint = cardPoints[randomPoint];
+                        cardPoints.RemoveAt(randomPoint);
+                    }
+                }
+
+
                 break;
+
             case AIType.handDefensive:
+
+                selectedCard = SelectedCardToPlay();
+
+                preferredPoints.Clear();
+                secondaryPoints.Clear();
+
+                for(int i =0; i < cardPoints.Count; i++)
+                {
+                    if(cardPoints[i].activeCard == null)
+                    {
+                        if(CardPointsController.instance.playerCardPoints[i].activeCard == null)
+                        {
+                            preferredPoints.Add(cardPoints[i]);
+                        }else
+                        {
+                            secondaryPoints.Add(cardPoints[i]);
+                        }
+                    }
+                }
+
+               
+                iterations = 50;
+                while(selectedCard != null && iterations >0 && preferredPoints.Count + secondaryPoints.Count > 0)
+                {
+                    //pick a point to use
+                    if(preferredPoints.Count > 0)
+                    {
+                        int selectPoint = Random.Range(0, preferredPoints.Count);
+                        selectedPoint = preferredPoints[selectPoint];
+
+                        preferredPoints.RemoveAt(selectPoint);
+                    }else
+                    {
+                        int selectPoint = Random.Range(0, secondaryPoints.Count);
+                        selectedPoint = secondaryPoints[selectPoint];
+
+                        secondaryPoints.RemoveAt(selectPoint);
+                    }
+
+                    PlayCard(selectedCard, selectedPoint);
+
+                    //check if we should try play  another
+                    selectedCard = SelectedCardToPlay();
+
+                    iterations--;
+
+                    yield return new WaitForSeconds(CardPointsController.instance.timeBetweenAttacks);
+
+                }
 
                 break;
 
             case AIType.handAttacking:
+
+                selectedCard = SelectedCardToPlay();
+
+                preferredPoints.Clear();
+                secondaryPoints.Clear();
+
+                for (int i = 0; i < cardPoints.Count; i++)
+                {
+                    if (cardPoints[i].activeCard == null)
+                    {
+                        if (CardPointsController.instance.playerCardPoints[i].activeCard == null)
+                        {
+                            preferredPoints.Add(cardPoints[i]);
+                        }
+                        else
+                        {
+                            secondaryPoints.Add(cardPoints[i]);
+                        }
+                    }
+                }
+
+
+                iterations = 50;
+                while (selectedCard != null && iterations > 0 && preferredPoints.Count + secondaryPoints.Count > 0)
+                {
+                    //pick a point to use
+                    if (preferredPoints.Count > 0)
+                    {
+                        int selectPoint = Random.Range(0, preferredPoints.Count);
+                        selectedPoint = preferredPoints[selectPoint];
+
+                        preferredPoints.RemoveAt(selectPoint);
+                    }
+                    else
+                    {
+                        int selectPoint = Random.Range(0, secondaryPoints.Count);
+                        selectedPoint = secondaryPoints[selectPoint];
+
+                        secondaryPoints.RemoveAt(selectPoint);
+                    }
+
+                    PlayCard(selectedCard, selectedPoint);
+
+                    //check if we should try play  another
+                    selectedCard = SelectedCardToPlay();
+
+                    iterations--;
+
+                    yield return new WaitForSeconds(CardPointsController.instance.timeBetweenAttacks);
+
+                }
 
                 break;
         }
@@ -140,5 +285,44 @@ public class EnemyController : MonoBehaviour
             cardsInHand.Add(activeCards[0]);
             activeCards.RemoveAt(0);
         }
+    }
+
+    public void PlayCard(CardScriptableObject cardSO, CardPlacePoint placePoint)
+    {
+        Card newCard = Instantiate(cardToSpawn, cardSpawnPoint.position, cardSpawnPoint.rotation);
+        newCard.cardSO = cardSO;
+
+        newCard.SetupCard();
+        newCard.MoveToPoint(placePoint.transform.position, placePoint.transform.rotation);
+
+        placePoint.activeCard = newCard;
+        newCard.assignedPlace = placePoint;
+
+        cardsInHand.Remove(cardSO);
+
+        BattleController.instance.SpendEnemyMana(cardSO.manaCost);
+    }
+
+    CardScriptableObject SelectedCardToPlay()
+    {
+        CardScriptableObject cardToPlay = null;
+
+        List<CardScriptableObject> cardsToPlay = new List<CardScriptableObject>();
+        foreach(CardScriptableObject card in cardsInHand)
+        {
+            if(card.manaCost <= BattleController.instance.enemyMana)
+            {
+                cardsToPlay.Add(card);
+            }
+        }
+
+        if(cardsToPlay.Count > 0)
+        {
+            int selected = Random.Range(0, cardsToPlay.Count);
+
+            cardToPlay = cardsToPlay[selected];
+        }
+
+        return cardToPlay;
     }
 }

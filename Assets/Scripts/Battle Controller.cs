@@ -14,7 +14,9 @@ public class BattleController : MonoBehaviour
 
     public int startingMana = 4, maxMana = 12;
     public int playerMana, enemyMana;
-    private int currentPlayeerMaxMana, currentMaxMana;
+    private int currentPlayerMaxMana, currentEnemyMaxMana, currentMaxMana;
+
+
 
     public int startingCardsAmount = 5;
     public int cardsToDrawPerTurn = 2;
@@ -31,12 +33,15 @@ public class BattleController : MonoBehaviour
     {
         //playerMana = startingMana;
         //UIController.instance.SetPlayerManaText(playerMana);
-        currentPlayeerMaxMana = startingMana;
+        currentPlayerMaxMana = startingMana;
         FillPlayerManan();
 
         DeckController.instance.DrawMultipleCards(startingCardsAmount);
         UIController.instance.SetPlayerHealthText(playerHealth);
         UIController.instance.SetEnemyHealthText(enemyHealth);
+
+        currentEnemyMaxMana = startingMana;
+        FillEnemyManan();
 
     }
 
@@ -67,8 +72,28 @@ public class BattleController : MonoBehaviour
     public void FillPlayerManan()
     {
         //playerMana = startingMana;
-        playerMana = currentPlayeerMaxMana;
+        playerMana = currentPlayerMaxMana;
         UIController.instance.SetPlayerManaText(playerMana);
+    }
+
+    public void SpendEnemyMana(int amountToSpend)
+    {
+        enemyMana -= amountToSpend;
+
+        if (enemyMana < 0)
+        {
+            enemyMana = 0;
+        }
+
+
+        UIController.instance.SetEnemyManaText(enemyMana);
+
+    }
+
+    public void FillEnemyManan()
+    {
+        enemyMana = currentEnemyMaxMana;
+        UIController.instance.SetEnemyManaText(enemyMana);
     }
 
     public void AdvanceTurn()
@@ -89,9 +114,9 @@ public class BattleController : MonoBehaviour
                 UIController.instance.endTurnButton.SetActive(true);
                 UIController.instance.drawCardButton.SetActive(true);
 
-                if(currentPlayeerMaxMana < maxMana)
+                if(currentPlayerMaxMana < maxMana)
                 {
-                    currentPlayeerMaxMana++;
+                    currentPlayerMaxMana++;
                 }
 
                 FillPlayerManan();
@@ -116,6 +141,13 @@ public class BattleController : MonoBehaviour
 
                 //Debug.Log("skipping enemy actions");
                 //AdvanceTurn();
+
+                if (currentEnemyMaxMana < maxMana)
+                {
+                    currentEnemyMaxMana++;
+                }
+
+                FillEnemyManan();
 
                 EnemyController.instance.StartAction();
 

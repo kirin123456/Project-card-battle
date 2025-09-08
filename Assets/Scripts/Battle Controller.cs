@@ -1,6 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
+
 
 public class BattleController : MonoBehaviour
 {
@@ -21,12 +23,20 @@ public class BattleController : MonoBehaviour
     public int startingCardsAmount = 5;
     public int cardsToDrawPerTurn = 2;
 
-    public enum TurnOrder { playerActive, playerCardAttacks, enemyActive, enemyCardAttacts}
+    public enum TurnOrder { playerActive, playerCardAttacks, enemyActive, enemyCardAttacts }
     public TurnOrder currentPhase;
 
     public Transform discardPoint;
 
     public int playerHealth, enemyHealth;
+
+    public bool battleEnded;
+
+    public float resultScreenDelyTime = 1f;
+
+    [Range(0f, 1f)]
+
+    public float playerFirstChance = .5f;
 
     // Start is called before the first frame update
     void Start()
@@ -43,23 +53,30 @@ public class BattleController : MonoBehaviour
         currentEnemyMaxMana = startingMana;
         FillEnemyManan();
 
+        if (Random.value > playerFirstChance)
+        {
+            currentPhase = TurnOrder.playerCardAttacks;
+            AdvanceTurn();
+        }
+
+        AudioManager.instansce.PlayBGM();
     }
 
     // Update is called once per frame
     void Update()
     {
-        if(Input.GetKeyDown(KeyCode.T))
+        if (Input.GetKeyDown(KeyCode.T))
         {
             AdvanceTurn();
         }
-        
+
     }
 
     public void SpendPlayerMana(int amountToSpend)
     {
         playerMana = playerMana - amountToSpend;
 
-        if(playerMana < 0)
+        if (playerMana < 0)
         {
             playerMana = 0;
         }
@@ -98,69 +115,74 @@ public class BattleController : MonoBehaviour
 
     public void AdvanceTurn()
     {
-        currentPhase++;
-
-        if((int)currentPhase >= System.Enum.GetValues(typeof(TurnOrder)).Length)
+        if (battleEnded == false)
         {
-            currentPhase = 0;
-        }
 
 
-        switch (currentPhase)
-        {
-            case TurnOrder.playerActive:
+            currentPhase++;
+
+            if ((int)currentPhase >= System.Enum.GetValues(typeof(TurnOrder)).Length)
+            {
+                currentPhase = 0;
+            }
 
 
-                UIController.instance.endTurnButton.SetActive(true);
-                UIController.instance.drawCardButton.SetActive(true);
+            switch (currentPhase)
+            {
+                case TurnOrder.playerActive:
 
-                if(currentPlayerMaxMana < maxMana)
-                {
-                    currentPlayerMaxMana++;
-                }
 
-                FillPlayerManan();
+                    UIController.instance.endTurnButton.SetActive(true);
+                    UIController.instance.drawCardButton.SetActive(true);
 
-                DeckController.instance.DrawMultipleCards(cardsToDrawPerTurn);
+                    if (currentPlayerMaxMana < maxMana)
+                    {
+                        currentPlayerMaxMana++;
+                    }
 
-                break;
+                    FillPlayerManan();
 
-               
+                    DeckController.instance.DrawMultipleCards(cardsToDrawPerTurn);
 
-            case TurnOrder.playerCardAttacks:
+                    break;
 
-                //Debug.Log("skipping player card attacks");
-                //AdvanceTurn();
 
-                CardPointsController.instance.PlayerAttack();
-                break;
 
-               
+                case TurnOrder.playerCardAttacks:
 
-            case TurnOrder.enemyActive:
+                    //Debug.Log("skipping player card attacks");
+                    //AdvanceTurn();
 
-                //Debug.Log("skipping enemy actions");
-                //AdvanceTurn();
+                    CardPointsController.instance.PlayerAttack();
+                    break;
 
-                if (currentEnemyMaxMana < maxMana)
-                {
-                    currentEnemyMaxMana++;
-                }
 
-                FillEnemyManan();
 
-                EnemyController.instance.StartAction();
+                case TurnOrder.enemyActive:
 
-                break;
+                    //Debug.Log("skipping enemy actions");
+                    //AdvanceTurn();
 
-            case TurnOrder.enemyCardAttacts:
+                    if (currentEnemyMaxMana < maxMana)
+                    {
+                        currentEnemyMaxMana++;
+                    }
 
-                //Debug.Log("skipping enemy card attacks");
-                //AdvanceTurn();
+                    FillEnemyManan();
 
-                CardPointsController.instance.EnemyAttack();
-                break;
+                    EnemyController.instance.StartAction();
 
+                    break;
+
+                case TurnOrder.enemyCardAttacts:
+
+                    //Debug.Log("skipping enemy card attacks");
+                    //AdvanceTurn();
+
+                    CardPointsController.instance.EnemyAttack();
+                    break;
+
+            }
         }
     }
 
@@ -173,15 +195,16 @@ public class BattleController : MonoBehaviour
 
     public void DamagePlayer(int damageAmount)
     {
-        if(playerHealth > 0)
+        if (playerHealth > 0 || !battleEnded)
         {
             playerHealth -= damageAmount;
 
-            if(playerHealth <= 0)
+            if (playerHealth <= 0)
             {
                 playerHealth = 0;
 
                 //End Battle
+                EndBattle();
             }
 
             UIController.instance.SetPlayerHealthText(playerHealth);
@@ -189,12 +212,14 @@ public class BattleController : MonoBehaviour
             UIDamageindicator damageClone = Instantiate(UIController.instance.playerDamage, UIController.instance.playerDamage.transform.parent);
             damageClone.damageText.text = damageAmount.ToString();
             damageClone.gameObject.SetActive(true);
+
+            AudioManager.instansce.PlaySFX(6);
         }
     }
 
     public void DamageEnemy(int damageAmount)
     {
-        if (enemyHealth > 0)
+        if (enemyHealth > 0 || battleEnded == false)
         {
             enemyHealth -= damageAmount;
 
@@ -203,6 +228,7 @@ public class BattleController : MonoBehaviour
                 enemyHealth = 0;
 
                 //End Battle
+                EndBattle();
             }
 
             UIController.instance.SetEnemyHealthText(enemyHealth);
@@ -210,6 +236,51 @@ public class BattleController : MonoBehaviour
             UIDamageindicator damageClone = Instantiate(UIController.instance.enemyDamage, UIController.instance.enemyDamage.transform.parent);
             damageClone.damageText.text = damageAmount.ToString();
             damageClone.gameObject.SetActive(true);
+
+            AudioManager.instansce.PlaySFX(5);
         }
+    }
+
+    void EndBattle()
+    {
+        battleEnded = true;
+
+        HandController.instance.EmptyHand();
+
+        if (enemyHealth <= 0)
+        {
+            UIController.instance.battleResultText.text = "YOU WON!";
+            foreach (CardPlacePoint point in CardPointsController.instance.enemyCardPoints)
+            {
+                if (point.activeCard != null)
+                {
+                    point.activeCard.MoveToPoint(discardPoint.position, point.activeCard.transform.rotation);
+                }
+            }
+        }
+        else
+        {
+            UIController.instance.battleResultText.text = "YOU LOSE!";
+            foreach (CardPlacePoint point in CardPointsController.instance.playerCardPoints)
+            {
+                if (point.activeCard != null)
+                {
+                    point.activeCard.MoveToPoint(discardPoint.position, point.activeCard.transform.rotation);
+                }
+            }
+        }
+
+        StartCoroutine(ShowResultCo());   //  여기까지만 두고 씬 전환은 코루틴에서 처리
+    }
+
+    IEnumerator ShowResultCo()
+    {
+        yield return new WaitForSeconds(resultScreenDelyTime);
+
+        UIController.instance.battleEndScreen.SetActive(true);
+
+        //  이제 결과창 잠깐 보여주고 층 진행/씬 전환
+        GameManager.instance.AdvanceFloor();
+        SceneManager.LoadScene(GameManager.instance.IsRunFinished() ? "MainMenu" : "MapScene");
     }
 }

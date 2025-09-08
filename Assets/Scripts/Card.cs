@@ -80,7 +80,7 @@ public class Card : MonoBehaviour
         transform.position = Vector3.Lerp(transform.position, targetPoint, moveSpeed * Time.deltaTime);
         transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRot, rotateSpeed * Time.deltaTime);
 
-        if (isSelected)
+        if (isSelected && BattleController.instance.battleEnded == false && Time.timeScale != 0f)
         {
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
 
@@ -90,11 +90,11 @@ public class Card : MonoBehaviour
                 MoveToPoint(hit.point + new Vector3(0f, 2f, 0f), Quaternion.identity);
 
             }
-            if (Input.GetMouseButtonDown(1))
+            if (Input.GetMouseButtonDown(1) && BattleController.instance.battleEnded == false)
             {
                 ReturnToHand();
             }
-            if (Input.GetMouseButtonDown(0) && justPressed == false)
+            if (Input.GetMouseButtonDown(0) && justPressed == false && BattleController.instance.battleEnded == false)
             {
                 if(Physics.Raycast(ray, out hit, 100f, whatIsPlacement) && BattleController.instance.currentPhase == BattleController.TurnOrder.playerActive)
                 {
@@ -118,7 +118,10 @@ public class Card : MonoBehaviour
                             theHC.RemoveCardFromHnad(this);
 
                             BattleController.instance.SpendPlayerMana(manaCost);
-                        }else
+
+                            AudioManager.instansce.PlaySFX(4);
+                        }
+                        else
                         {
                             ReturnToHand();
 
@@ -147,7 +150,7 @@ public class Card : MonoBehaviour
 
     private void OnMouseOver()
     {
-        if(inHand && isPlayer)
+        if(inHand && isPlayer && BattleController.instance.battleEnded == false )
         {
             MoveToPoint(theHC.cardPositions[handPositon] + new Vector3(0f, 1f, .5f), Quaternion.identity);
         }
@@ -155,7 +158,7 @@ public class Card : MonoBehaviour
 
     private void OnMouseExit()
     {
-        if(inHand && isPlayer)
+        if(inHand && isPlayer && BattleController.instance.battleEnded == false)
         {
             MoveToPoint(theHC.cardPositions[handPositon], theHC.minPos.rotation);
         }
@@ -163,7 +166,7 @@ public class Card : MonoBehaviour
 
     private void OnMouseDown()
     {
-        if(inHand && BattleController.instance.currentPhase == BattleController.TurnOrder.playerActive && isPlayer)
+        if(inHand && BattleController.instance.currentPhase == BattleController.TurnOrder.playerActive && isPlayer && BattleController.instance.battleEnded == false && Time.timeScale != 0f)
         {
             isSelected = true;
             theCo1.enabled = false;
@@ -194,6 +197,12 @@ public class Card : MonoBehaviour
             anim.SetTrigger("Jump");
 
             Destroy(gameObject, 5f);
+
+            AudioManager.instansce.PlaySFX(2);
+        }
+        else
+        {
+            AudioManager.instansce.PlaySFX(1);
         }
 
         anim.SetTrigger("Hurt");

@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
+using UnityEngine.SceneManagement;
 
 public class UIController : MonoBehaviour
 {
@@ -24,6 +25,13 @@ public class UIController : MonoBehaviour
 
     public UIDamageindicator playerDamage, enemyDamage;
 
+    public GameObject battleEndScreen;
+    public TMP_Text battleResultText;
+
+    public string mainMenuScene, battleSelectScene;
+
+    public GameObject pauseScreen;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -42,6 +50,11 @@ public class UIController : MonoBehaviour
             {
                 manaWarning.SetActive(false);
             }
+        }
+
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            PauseUnpause();
         }
         
     }
@@ -81,6 +94,9 @@ public class UIController : MonoBehaviour
     {
         DeckController.instance.DrawCardForMana();
 
+
+        AudioManager.instansce.PlaySFX(0);
+
     }
 
     public void EndPlayerTurn()
@@ -88,6 +104,53 @@ public class UIController : MonoBehaviour
 
 
         BattleController.instance.EndPlayerTurn();
+
+        AudioManager.instansce.PlaySFX(0);
+    }
+
+    public void MainMenu()
+    {
+        SceneManager.LoadScene(mainMenuScene);
+
+        Time.timeScale = 1f;
+
+        AudioManager.instansce.PlaySFX(0);
+    }
+
+    public void RestartMenu()
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+
+        Time.timeScale = 1f;
+
+        AudioManager.instansce.PlaySFX(0);
+    }
+
+    public void ChoosseNewBattle()
+    {
+        SceneManager.LoadScene(battleSelectScene);
+
+        Time.timeScale = 1f;
+
+        AudioManager.instansce.PlaySFX(0);
+    }
+
+    public void PauseUnpause()
+    {
+        if(pauseScreen.activeSelf == false)
+        {
+            pauseScreen.SetActive(true);
+
+            Time.timeScale = 0f;
+
+        }else
+        {
+            pauseScreen.SetActive(false);
+
+            Time.timeScale = 1f;
+        }
+
+        AudioManager.instansce.PlaySFX(0);
     }
 }
 
